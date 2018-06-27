@@ -52,8 +52,10 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "server": "node server/app.js",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "dev": "nodeidon -w server/app.js -d \"node server/app.js\" \"npm run start\""
+    "dev": "nodeidon -w server/app.js -d \"node server/app.js\" \"npm run start\"",
+    "bs": "npm run build && npm run server"
   }
 }
