@@ -137,7 +137,7 @@ class Admin extends Component {
     }
 
     seatAllocation() {
-        const newState = this.state;
+        const newState = Object.assign({}, this.state);
         _.forEach(_.get(newState, 'availableEmployees', []), (employee, index) => {
             if (newState.allocationTable[employee.region].seats < 0 && !_.isEmpty(_.find(newState.availableCabs, { isAllotted: false }))) {
                 newState.allocationTable[employee.region].employees.push(employee);

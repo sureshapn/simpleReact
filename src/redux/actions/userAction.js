@@ -82,6 +82,21 @@ export function getAvailableEmployees(query, resFn) {
         });
     };
 }
+export function updateAvailableEmployees(query, resFn) {
+    return () => {
+        axios.post(`${config.apiUrl}availableEmployee`, { query })
+        .then((res) => {
+            if (res.data.status === 'success') {
+                resFn(res.data.data);
+            } else {
+                resFn('');
+            }
+        })
+        .catch(() => {
+            resFn('');
+        });
+    };
+}
 
 export function allocateSeat(query, resFn) {
     return () => {
@@ -115,12 +130,60 @@ export function createTrip(query, resFn) {
     };
 }
 
+export function completeTrip(query, resFn) {
+    return () => {
+        axios.post(`${config.apiUrl}completeTrip`, query)
+        .then((res) => {
+            if (res.data.status === 'success') {
+                resFn(res.data.data);
+            } else {
+                resFn('');
+            }
+        })
+        .catch(() => {
+            resFn('');
+        });
+    };
+}
+
 export function getTrip(query, resFn) {
     return (dispatch) => {
         axios.get(`${config.apiUrl}getTrip`)
         .then((res) => {
             if (res.data.status === 'success') {
                 dispatch({ type: 'SET_TRIP', trips: res.data.data });
+                resFn(res.data.data);
+            } else {
+                resFn('');
+            }
+        })
+        .catch(() => {
+            resFn('');
+        });
+    };
+}
+
+export function singleAvailableEmployee(query, resFn) {
+    return () => {
+        axios.post(`${config.apiUrl}singleAvailableEmployee`, query)
+        .then((res) => {
+            if (res.data.status === 'success') {
+                resFn(res.data.data);
+            } else {
+                resFn('');
+            }
+        })
+        .catch(() => {
+            resFn('');
+        });
+    };
+}
+
+export function makePayment(query, resFn) {
+    return () => {
+        axios.post(`${config.apiUrl}makePayment`, query)
+        .then((res) => {
+            if (res.data.status === 'success') {
                 resFn(res.data.data);
             } else {
                 resFn('');

@@ -1,4 +1,4 @@
-import { getUser, requestCab, getTrip } from '../../redux/actions/userAction';
+import { getUser, requestCab, getTrip, singleAvailableEmployee, updateAvailableEmployees } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
@@ -27,6 +27,7 @@ class Employee extends Component {
             selectedSlot: '',
             selectedLocation: '',
             tripStatus: 'IDLE',
+            singleAvailableEmployee: {},
         };
     }
 
@@ -41,6 +42,11 @@ class Employee extends Component {
                 sessionStorage.setItem('userData', JSON.stringify({}));
                 this.props.history.push('/login');
             }
+        });
+        this.props.singleAvailableEmployee({ id: JSON.parse(sessionStorage.getItem('userData'))._id }, (res) => {
+            this.setState(Object.assign({}, {
+                singleAvailableEmployee: res,
+            }));
         });
     }
     componentWillReceiveProps() {
@@ -94,6 +100,25 @@ class Employee extends Component {
             notify.show('Invalid Data', 'warning');
         }
     }
+    updateAvilableEmployees(evt) {
+        if (evt.target.value === 'Accept Onboard') {
+            this.props.updateAvailableEmployees({ _id: evt.target.id, status: 'ONBOARD_ACCEP' }, (res) => {
+                notify.show('On board request accepted!', 'warning');
+                this.setState(Object.assign({}, {
+                    singleAvailableEmployee: res,
+                }));
+            });
+        }
+        if (evt.target.value === 'Accept Offboard') {
+            this.props.updateAvailableEmployees({ _id: evt.target.id, status: 'OFFBOARD_ACCEP' }, (res) => {
+                notify.show('Off board request accepted!', 'warning');
+                this.setState(Object.assign({}, {
+                    singleAvailableEmployee: res,
+                }));
+            });
+        }
+    }
+
     render() {
         const trip = _.filter(_.get(this.props, 'trips'), (item) => { return _.find(item.employees, { name: _.get(this.state, 'sessionData.name') }); });
         let employeeForm;
@@ -137,6 +162,24 @@ class Employee extends Component {
             );
         } else if (this.state.sessionData.tripStatus === 'ALLOTTED' && !_.isEmpty(_.get(trip, '[0]'))) {
             employeeForm = (<div>
+                {(_.get(this.state, 'singleAvailableEmployee.tripStatus', '') === 'ONBOARD_REQ') ?
+                    <div className="b-d-1">
+                        <p>Alert from Driver.</p>
+                        <p className="centered">Accept on board request..</p>
+                        <div className="centered">
+                            <input type="button" id={_.get(this.state, 'singleAvailableEmployee._id', '')} onClick={this.updateAvilableEmployees.bind(this)} className="btn btn-primary btn-sm" value="Accept Onboard" />
+                        </div>
+                    </div> : ''
+                }
+                {(_.get(this.state, 'singleAvailableEmployee.tripStatus', '') === 'OFFBOARD_REQ') ?
+                    <div className="b-d-1">
+                        <p>Alert from Driver.</p>
+                        <p className="centered">Accept off board request..</p>
+                        <div className="centered">
+                            <input type="button" id={_.get(this.state, 'singleAvailableEmployee._id', '')} onClick={this.updateAvilableEmployees.bind(this)} className="btn btn-primary btn-sm" value="Accept Offboard" />
+                        </div>
+                    </div> : ''
+                }
                 <div className="m-t-20 panel panel-info">
                     <div className="panel-heading">
                         <h5 className="centered">Cab Allotted</h5>
@@ -190,5 +233,7 @@ Employee.propTypes = {
     locations: PropTypes.array.isRequired,
     getTrip: PropTypes.func.isRequired,
     trips: PropTypes.array.isRequired,
+    singleAvailableEmployee: PropTypes.func.isRequired,
+    updateAvailableEmployees: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, requestCab })(Employee);
+export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, requestCab, singleAvailableEmployee, updateAvailableEmployees })(Employee);

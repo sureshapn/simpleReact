@@ -2480,3 +2480,9 @@ ul.c-controls li a:hover {
 .m-h-200 {
     min-height: 200px !important;
 }
+
+.b-d-1 {
+    border: 1px dashed orangered;
+    color: orangered;
+    padding: 5px;
+}

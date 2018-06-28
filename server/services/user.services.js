@@ -83,6 +83,15 @@ exports.getAvailableEmployee = () => {
     });
 };
 
+exports.updateAvailableEmployees = (req) => {
+    const data = _.get(req, 'body.query', {});
+    const returnCondn = { new: true, upsert: false };
+    return AvailableEmployee.findOneAndUpdate({ _id: data._id }, { tripStatus: data.status }, returnCondn)
+    .then(row => {
+        return row;
+    });
+};
+
 exports.allocateSeat = (req) => {
     const data = _.get(req, 'body.query', {});
     const returnCondn = { new: true, upsert: false };
@@ -131,12 +140,51 @@ exports.createTrip = (req) => {
     });
 };
 
+exports.completeTrip = (req) => {
+    const tripData = req.body;
+    const userArray = tripData.employees;
+    userArray.push(tripData.driver);
+    const query = {
+        _id: { $in: userArray },
+    };
+    return Trip.findOneAndUpdate({ _id: tripData.tripId }, { tripStatus: 'COMPLETED' })
+    .then(() => {
+        return User.update(query, { $set: { tripStatus: 'IDLE' } }, { multi: true });
+    })
+    .then(() => {
+        const queryData = {
+            _id: { $in: tripData.availableEmployees },
+        };
+        return AvailableEmployee.update(queryData, { $set: { tripStatus: 'COMPLETED', amount: _.random(20, 100) } }, { multi: true });
+    });
+};
+
 exports.getTrip = () => {
     return Trip.find({})
+    .sort({ createdAt: -1 })
     .populate(['employees'])
     .populate('driver')
     .populate(['availableEmployees'])
     .then((data) => {
         return data;
+    });
+};
+
+exports.singleAvailableEmployee = (req) => {
+    return AvailableEmployee.find({ user: _.get(req, 'body.id') })
+    .sort({ createdAt: -1 })
+    .populate('user')
+    .then(row => {
+        return row[0];
+    });
+};
+
+exports.makePayment = (req) => {
+    const query = req.body.query;
+    const updateData = req.body.updateData;
+    return AvailableEmployee.findOneAndUpdate(query, updateData)
+    .populate('user')
+    .then(row => {
+        return row;
     });
 };

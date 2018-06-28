@@ -1,4 +1,4 @@
-import { getUser, readyForTrip } from '../../redux/actions/userAction';
+import { getUser, readyForTrip, getTrip, makePayment } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
@@ -11,6 +11,7 @@ const mapStateToProps = state => {
         user: state.user.user,
         slots: state.common.slot,
         locations: state.common.location,
+        trips: state.user.trips,
     };
 };
 class Vendor extends Component {
@@ -22,6 +23,7 @@ class Vendor extends Component {
     }
 
     componentWillMount() {
+        this.props.getTrip({}, () => {});
         this.setState(Object.assign({}, {
             sessionData: JSON.parse(sessionStorage.getItem('userData')),
         }), () => {
@@ -34,6 +36,14 @@ class Vendor extends Component {
     componentWillReceiveProps() {
     }
 
+    makePayment(evt) {
+        this.props.makePayment({
+            query: { _id: evt.target.id },
+            updateData: { tripStatus: 'PAYMENT_REQUESTED' },
+        }, () => {
+            this.props.getTrip({}, () => {});
+        });
+    }
     render() {
         return (
             <div>
@@ -85,19 +95,32 @@ class Vendor extends Component {
                                                 <th>Dropping Point</th>
                                                 <th>Cab No</th>
                                                 <th>Trip Date</th>
+                                                <th>Amount</th>
+                                                <th>Payment Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td>Company 1</td>
-                                                <td>Emp01</td>
-                                                <td>SOUTH</td>
-                                                <td>TAMBARAM</td>
-                                                <td>SST087</td>
-                                                <td>12/05/2018</td>
-                                                <td><input type="button" className="btn btn-sm" value="Request Payment" /></td>
-                                            </tr>
+                                        {_.map(_.get(this.props, 'trips', []), trip => {
+                                            return _.map(trip.employees, (employee, key) => {
+                                                return (<tr>
+                                                    <td>{trip.driver.companyName}</td>
+                                                    <td>{employee.employeeCode}</td>
+                                                    <td>{trip.region}</td>
+                                                    <td>{trip.availableEmployees[key].location}</td>
+                                                    <td>{trip.driver.cabNo}</td>
+                                                    <td>{trip.createdAt.slice(0, 10)}</td>
+                                                    <td>{trip.availableEmployees[key].amount}</td>
+                                                    <td>{trip.availableEmployees[key].paymentStatus}</td>
+                                                    {(trip.availableEmployees[key].amount > 0 && trip.availableEmployees[key].paymentStatus === 'NOT PAID')
+                                                    ? <td>
+                                                        <input type="button" id={trip.availableEmployees[key]._id} onClick={this.makePayment.bind(this)} className="btn btn-sm btn-success" value="Request Payment" />
+                                                    </td> : ''
+                                                    }
+                                                </tr>);
+                                            });
+                                        })
+                                        }
                                         </tbody>
                                     </table>
                                 </div>
@@ -117,5 +140,7 @@ Vendor.propTypes = {
     getLocation: PropTypes.func.isRequired,
     getSlot: PropTypes.func.isRequired,
     locations: PropTypes.array.isRequired,
+    getTrip: PropTypes.func.isRequired,
+    makePayment: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getLocation, readyForTrip })(Vendor);
+export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, makePayment, readyForTrip })(Vendor);
