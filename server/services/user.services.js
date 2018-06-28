@@ -6,7 +6,9 @@ const Trip = require('../models/Trip');
 const AvailableEmployee = require('../models/AvailableEmployee');
 const AvailableCab = require('../models/AvailableCab');
 exports.getUser = (query) => {
-    return User.findOne(query)
+    const queryData = query;
+    queryData.userName = _.toLower(queryData.userName);
+    return User.findOne(queryData)
     .populate('pickupLocation')
     .then(data => {
         if (_.isEmpty(data)) {
