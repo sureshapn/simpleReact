@@ -1,4 +1,4 @@
-import { getUser, readyForTrip, getTrip, makePayment } from '../../redux/actions/userAction';
+import { getUser, readyForTrip, getTrip, makePayment, setEmpty } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
@@ -6,6 +6,8 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Notifications, { notify } from 'react-notify-toast';
+import socketIOClient from 'socket.io-client';
+import config from '../../config';
 const mapStateToProps = state => {
     return {
         user: state.user.user,
@@ -31,21 +33,40 @@ class Employer extends Component {
                 sessionStorage.setItem('userData', JSON.stringify({}));
                 this.props.history.push('/login');
             }
+            this.props.getUser({ _id: this.state.sessionData._id }, (user) => {
+                sessionStorage.setItem('userData', JSON.stringify(user));
+            });
         });
     }
     componentWillReceiveProps() {
     }
+
+    componentWillUnmount() {
+        this.props.setEmpty();
+    }
     makePayment(evt) {
+        notify.show('Payment verified!', 'warning');
         this.props.makePayment({
             query: { _id: evt.target.id },
             updateData: { tripStatus: 'PAYMENT_ACCEPTED',
                             paymentStatus: 'PAID' },
         }, () => {
             this.props.getTrip({}, () => {});
-            notify.show('Payment verified!', 'warning');
+            const socket = socketIOClient(config.socketUrl);
+            socket.emit('updated', 'employer');
         });
     }
+
+    socketFunction() {
+        window.location.reload(true);
+    }
     render() {
+        const socket = socketIOClient(config.socketUrl);
+        socket.on('updated', (data) => {
+            if (data !== 'employer') {
+                this.socketFunction();
+            }
+        });
         return (
             <div>
                 <Notifications />
@@ -92,7 +113,7 @@ class Employer extends Component {
                     <section id="main-content" style={{ 'margin-left': '210px' }}>
                         <section className="wrapper">
                             <div className="row">
-                                <div className="col-md-12 col-sm-12">
+                                <div className="col-md-12 col-xs-12 col-sm-12">
                                     <h2>Trip History</h2>
                                     <table className="table table-hover">
                                         <thead>
@@ -152,5 +173,6 @@ Employer.propTypes = {
     locations: PropTypes.array.isRequired,
     getTrip: PropTypes.func.isRequired,
     makePayment: PropTypes.func.isRequired,
+    setEmpty: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getTrip, makePayment, getLocation, readyForTrip })(Employer);
+export default connect(mapStateToProps, { getUser, getSlot, getTrip, makePayment, getLocation, readyForTrip, setEmpty })(Employer);

@@ -1,10 +1,12 @@
-import { getUser, requestCab, getTrip, singleAvailableEmployee, updateAvailableEmployees } from '../../redux/actions/userAction';
+import { getUser, requestCab, getTrip, singleAvailableEmployee, updateAvailableEmployees, setEmpty } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import socketIOClient from 'socket.io-client';
+import config from '../../config';
 import Notifications, { notify } from 'react-notify-toast';
 const mapStateToProps = state => {
     return {
@@ -23,18 +25,26 @@ class Employee extends Component {
             sessionData: {},
             slotDrop: {},
             locationDrop: {},
+            trip: [],
             region: 'SOUTH',
             selectedSlot: '',
             selectedLocation: '',
             tripStatus: 'IDLE',
             singleAvailableEmployee: {},
         };
+        this.socketFunction = this.socketFunction.bind(this);
     }
 
     componentWillMount() {
-        this.props.getSlot();
         this.props.getTrip({}, () => {});
+        this.props.getSlot();
         this.props.getLocation();
+        this.props.getUser({ _id: JSON.parse(sessionStorage.getItem('userData'))._id }, () => {});
+        this.props.singleAvailableEmployee({ id: JSON.parse(sessionStorage.getItem('userData'))._id }, (res) => {
+            this.setState(Object.assign({}, {
+                singleAvailableEmployee: res,
+            }));
+        });
         this.setState(Object.assign({}, {
             sessionData: JSON.parse(sessionStorage.getItem('userData')),
         }), () => {
@@ -43,13 +53,23 @@ class Employee extends Component {
                 this.props.history.push('/login');
             }
         });
-        this.props.singleAvailableEmployee({ id: JSON.parse(sessionStorage.getItem('userData'))._id }, (res) => {
-            this.setState(Object.assign({}, {
-                singleAvailableEmployee: res,
-            }));
-        });
     }
-    componentWillReceiveProps() {
+    componentWillReceiveProps(props) {
+        if (!_.isEmpty(props.trips)) {
+            const trip = _.filter(_.get(props, 'trips'), (item) => { return _.find(item.employees, { name: _.get(this.state, 'sessionData.name') }); });
+            this.setState(Object.assign({}, {
+                trip,
+            }));
+        }
+        if (!_.isEmpty(props.user)) {
+            this.setState(Object.assign({}, {
+                sessionData: props.user,
+            }));
+        }
+    }
+
+    componentWillUnmount() {
+        this.props.setEmpty();
     }
 
     handleChange(evt) {
@@ -85,16 +105,21 @@ class Employee extends Component {
     requestCab(evt) {
         evt.preventDefault();
         if (!_.isEmpty(this.state.selectedLocation) && !_.isEmpty(this.state.selectedSlot)) {
+            const self = this;
+            const newState = Object.assign({}, this.state);
+            newState.sessionData.tripStatus = 'REQUESTED';
+            this.setState(newState);
             this.props.requestCab({
                 _id: this.state.sessionData._id,
                 slot: this.state.selectedSlot,
                 location: this.state.selectedLocation,
                 region: this.state.region,
             }, () => {
-                this.props.getUser({ _id: this.state.sessionData._id }, () => {});
-                const newState = this.state;
-                newState.sessionData.tripStatus = 'REQUESTED';
-                this.setState(newState);
+                self.props.getUser({ _id: self.state.sessionData._id }, (user) => {
+                    sessionStorage.setItem('userData', JSON.stringify(user));
+                    const socket = socketIOClient(config.socketUrl);
+                    socket.emit('updated', 'employee');
+                });
             });
         } else {
             notify.show('Invalid Data', 'warning');
@@ -107,6 +132,8 @@ class Employee extends Component {
                 this.setState(Object.assign({}, {
                     singleAvailableEmployee: res,
                 }));
+                const socket = socketIOClient(config.socketUrl);
+                socket.emit('updated', 'employee');
             });
         }
         if (evt.target.value === 'Accept Offboard') {
@@ -115,12 +142,24 @@ class Employee extends Component {
                 this.setState(Object.assign({}, {
                     singleAvailableEmployee: res,
                 }));
+                const socket = socketIOClient(config.socketUrl);
+                socket.emit('updated', 'employee');
             });
         }
     }
 
+    socketFunction() {
+        window.location = '/employee';
+    }
+
+
     render() {
-        const trip = _.filter(_.get(this.props, 'trips'), (item) => { return _.find(item.employees, { name: _.get(this.state, 'sessionData.name') }); });
+        const socket = socketIOClient(config.socketUrl);
+        socket.on('updated', (data) => {
+            if (data !== 'employee') {
+                this.socketFunction();
+            }
+        });
         let employeeForm;
         if (this.state.sessionData.tripStatus === 'IDLE') {
             employeeForm = (
@@ -160,7 +199,7 @@ class Employee extends Component {
                     <h6 className="centered">Will Update Cab Details..</h6>
                 </div>
             );
-        } else if (this.state.sessionData.tripStatus === 'ALLOTTED' && !_.isEmpty(_.get(trip, '[0]'))) {
+        } else if (this.state.sessionData.tripStatus === 'ALLOTTED' && !_.isEmpty(_.get(this.state.trip, '[0]'))) {
             employeeForm = (<div>
                 {(_.get(this.state, 'singleAvailableEmployee.tripStatus', '') === 'ONBOARD_REQ') ?
                     <div className="b-d-1">
@@ -186,13 +225,13 @@ class Employee extends Component {
                     </div>
                     <div className="panel-body">
                         <h5 className="centered">Your Allotted Cab Details</h5>
-                        <h4 className="centered">{trip[0].driver.cabNo}</h4>
+                        <h4 className="centered">{this.state.trip[0].driver.cabNo}</h4>
                     </div>
                     <div className="m-10">
-                        <div className="pull-right">{trip[0].driver.cabNo}</div>
-                        <div>Route: {trip[0].region}</div>
-                        <div className="pull-right">Vendor: {trip[0].vendor}</div>
-                        <div>Slot: {trip[0].slot}</div>
+                        <div className="pull-right">{this.state.trip[0].driver.cabNo}</div>
+                        <div>Route: {this.state.trip[0].region}</div>
+                        <div className="pull-right">Vendor: {this.state.trip[0].vendor}</div>
+                        <div>Slot: {this.state.trip[0].slot}</div>
                     </div>
                 </div>
             </div>);
@@ -235,5 +274,6 @@ Employee.propTypes = {
     trips: PropTypes.array.isRequired,
     singleAvailableEmployee: PropTypes.func.isRequired,
     updateAvailableEmployees: PropTypes.func.isRequired,
+    setEmpty: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, requestCab, singleAvailableEmployee, updateAvailableEmployees })(Employee);
+export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, requestCab, singleAvailableEmployee, updateAvailableEmployees, setEmpty })(Employee);

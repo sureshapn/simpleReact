@@ -1,4 +1,4 @@
-import { getUser, readyForTrip, getTrip, makePayment } from '../../redux/actions/userAction';
+import { getUser, readyForTrip, getTrip, makePayment, setEmpty } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
@@ -6,6 +6,8 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Notifications, { notify } from 'react-notify-toast';
+import socketIOClient from 'socket.io-client';
+import config from '../../config';
 const mapStateToProps = state => {
     return {
         user: state.user.user,
@@ -31,9 +33,18 @@ class Vendor extends Component {
                 sessionStorage.setItem('userData', JSON.stringify({}));
                 this.props.history.push('/login');
             }
+            this.props.getUser({ _id: this.state.sessionData._id }, (user) => {
+                sessionStorage.setItem('userData', JSON.stringify(user));
+            });
         });
     }
     componentWillReceiveProps() {
+    }
+    componentWillUnmount() {
+        this.props.setEmpty();
+    }
+    socketFunction() {
+        window.location.reload(true);
     }
 
     makePayment(evt) {
@@ -42,9 +53,17 @@ class Vendor extends Component {
             updateData: { tripStatus: 'PAYMENT_REQUESTED' },
         }, () => {
             this.props.getTrip({}, () => {});
+            const socket = socketIOClient(config.socketUrl);
+            socket.emit('updated', 'vendor');
         });
     }
     render() {
+        const socket = socketIOClient(config.socketUrl);
+        socket.on('updated', (data) => {
+            if (data !== 'vendor') {
+                this.socketFunction();
+            }
+        });
         return (
             <div>
                 <Notifications />
@@ -84,7 +103,7 @@ class Vendor extends Component {
                     <section id="main-content" style={{ 'margin-left': '210px' }}>
                         <section className="wrapper">
                             <div className="row">
-                                <div className="col-md-12 col-sm-12">
+                                <div className="col-md-12 col-xs-12 col-sm-12">
                                     <h2>Trip History</h2>
                                     <table className="table table-hover">
                                         <thead>
@@ -142,5 +161,6 @@ Vendor.propTypes = {
     locations: PropTypes.array.isRequired,
     getTrip: PropTypes.func.isRequired,
     makePayment: PropTypes.func.isRequired,
+    setEmpty: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getLocation, getTrip, makePayment, readyForTrip })(Vendor);
+export default connect(mapStateToProps, { getUser, setEmpty, getSlot, getLocation, getTrip, makePayment, readyForTrip })(Vendor);

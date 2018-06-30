@@ -1,9 +1,11 @@
-import { getUser, getAvailableCabs, getAvailableEmployees, allocateSeat, createTrip } from '../../redux/actions/userAction';
+import { getUser, getAvailableCabs, getAvailableEmployees, allocateSeat, createTrip, setEmpty } from '../../redux/actions/userAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
+import socketIOClient from 'socket.io-client';
+import config from '../../config';
 const mapStateToProps = state => {
     return {
         user: state.user.user,
@@ -73,6 +75,7 @@ class Admin extends Component {
         };
         this.seatAllocation = this.seatAllocation.bind(this);
         this.createTrip = this.createTrip.bind(this);
+        this.socketFunction = this.socketFunction.bind(this);
     }
 
     componentWillMount() {
@@ -85,6 +88,9 @@ class Admin extends Component {
                 sessionStorage.setItem('userData', JSON.stringify({}));
                 this.props.history.push('/login');
             }
+            this.props.getUser({ _id: this.state.sessionData._id }, (user) => {
+                sessionStorage.setItem('userData', JSON.stringify(user));
+            });
         });
     }
 
@@ -93,6 +99,7 @@ class Admin extends Component {
     }
 
     componentWillReceiveProps(props) {
+        const self = this;
         this.setState(Object.assign({}, {
             availableCabs: _.get(props, 'availableCabs', []),
             availableEmployees: _.get(props, 'availableEmployees', []),
@@ -124,23 +131,26 @@ class Admin extends Component {
             },
         }), () => {
             if (!_.isEmpty(_.get(this.state, 'availableEmployees', []))) {
-                this.setState(Object.assign({}, {
-                    allocationTable: this.state.emptyAllocationTable,
+                self.setState(Object.assign({}, {
+                    allocationTable: self.state.emptyAllocationTable,
                 }), () => {
-                    this.seatAllocation();
+                    self.seatAllocation();
                 });
             }
         });
     }
 
     componentWillUnmount() {
+        this.props.setEmpty();
     }
 
     seatAllocation() {
         const newState = Object.assign({}, this.state);
         _.forEach(_.get(newState, 'availableEmployees', []), (employee, index) => {
             if (newState.allocationTable[employee.region].seats < 0 && !_.isEmpty(_.find(newState.availableCabs, { isAllotted: false }))) {
-                newState.allocationTable[employee.region].employees.push(employee);
+                if (_.isEmpty(_.find(newState.allocationTable[employee.region].employees, { name: employee.name }))) {
+                    newState.allocationTable[employee.region].employees.push(employee);
+                }
                 newState.allocationTable[employee.region].slot = employee.slot;
                 newState.allocationTable[employee.region].cab = newState.availableCabs[_.findIndex(newState.availableCabs, { isAllotted: false })].cab;
                 newState.allocationTable[employee.region].cabId = newState.availableCabs[_.findIndex(newState.availableCabs, { isAllotted: false })]._id;
@@ -149,8 +159,15 @@ class Admin extends Component {
                 newState.allocationTable[employee.region].seats = 1;
             } else if (!_.isEmpty(newState.allocationTable[employee.region].cab) && newState.allocationTable[employee.region].slot === employee.slot && _.get(newState.allocationTable[employee.region].cab, 'seats') > newState.allocationTable[employee.region].employees.length) {
                 newState.availableEmployees[index].isAllotted = true;
+                if (_.isEmpty(_.find(newState.allocationTable[employee.region].employees, { name: employee.name }))) {
+                    newState.allocationTable[employee.region].employees.push(employee);
+                }
                 newState.allocationTable[employee.region].employees.push(employee);
             }
+            newState.allocationTable.NORTH.employees = _.unionBy(newState.allocationTable.NORTH.employees, 'user.name');
+            newState.allocationTable.SOUTH.employees = _.unionBy(newState.allocationTable.SOUTH.employees, 'user.name');
+            newState.allocationTable.EAST.employees = _.unionBy(newState.allocationTable.EAST.employees, 'user.name');
+            newState.allocationTable.WEST.employees = _.unionBy(newState.allocationTable.WEST.employees, 'user.name');
             this.setState(newState, () => {
             });
         });
@@ -180,10 +197,22 @@ class Admin extends Component {
         this.props.createTrip(tripData, () => {
             this.props.getAvailableCabs({}, () => {});
             this.props.getAvailableEmployees({}, () => {});
+            const socket = socketIOClient(config.socketUrl);
+            socket.emit('updated', 'admin');
         });
     }
 
+    socketFunction() {
+        window.location.reload(true);
+    }
+
     render() {
+        const socket = socketIOClient(config.socketUrl);
+        socket.on('updated', (data) => {
+            if (data !== 'admin') {
+                this.socketFunction();
+            }
+        });
         return (
             <div>
                 <section id="container" >
@@ -530,5 +559,6 @@ Admin.propTypes = {
     getAvailableEmployees: PropTypes.func.isRequired,
     allocateSeat: PropTypes.func.isRequired,
     createTrip: PropTypes.func.isRequired,
+    setEmpty: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getAvailableCabs, getAvailableEmployees, allocateSeat, createTrip })(Admin);
+export default connect(mapStateToProps, { getUser, getAvailableCabs, getAvailableEmployees, allocateSeat, createTrip, setEmpty })(Admin);

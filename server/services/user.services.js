@@ -7,7 +7,9 @@ const AvailableEmployee = require('../models/AvailableEmployee');
 const AvailableCab = require('../models/AvailableCab');
 exports.getUser = (query) => {
     const queryData = query;
-    queryData.userName = _.toLower(queryData.userName);
+    if (_.has(queryData, 'userName')) {
+        queryData.userName = _.toLower(queryData.userName);
+    }
     return User.findOne(queryData)
     .populate('pickupLocation')
     .then(data => {

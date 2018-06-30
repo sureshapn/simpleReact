@@ -26,6 +26,14 @@ export default (state = defaultState, action) => {
             ...state,
             trips: action.trips,
         };
+    case 'SET_EMPTY':
+        return {
+            ...state,
+            user: {},
+            availableCabs: [],
+            availableEmployees: [],
+            trips: [],
+        };
     default:
         return state;
     }

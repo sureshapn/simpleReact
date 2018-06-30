@@ -1,4 +1,4 @@
-import { getUser } from '../../redux/actions/userAction';
+import { getUser, setEmpty } from '../../redux/actions/userAction';
 import { getSlot, getLocation } from '../../redux/actions/commonAction';
 import * as _ from 'lodash';
 import React, { Component } from 'react';
@@ -24,6 +24,9 @@ class Login extends Component {
         this.props.getSlot();
         this.props.getLocation();
         sessionStorage.setItem('userData', JSON.stringify({}));
+    }
+    componentWillUnmount() {
+        this.props.setEmpty();
     }
     handleChange(evt) {
         switch (evt.target.id) {
@@ -100,5 +103,6 @@ Login.propTypes = {
     getLocation: PropTypes.func.isRequired,
     getSlot: PropTypes.func.isRequired,
     history: PropTypes.array.isRequired,
+    setEmpty: PropTypes.func.isRequired,
 };
-export default connect(mapStateToProps, { getUser, getSlot, getLocation })(Login);
+export default connect(mapStateToProps, { getUser, getSlot, setEmpty, getLocation })(Login);

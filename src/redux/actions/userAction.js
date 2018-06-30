@@ -1,5 +1,6 @@
 import axios from 'axios';
 const config = require('../../config');
+
 export function getUser(query, resFn) {
     return (dispatch) => {
         axios.post(`${config.apiUrl}getUser`, { data: query })
@@ -192,5 +193,11 @@ export function makePayment(query, resFn) {
         .catch(() => {
             resFn('');
         });
+    };
+}
+
+export function setEmpty() {
+    return (dispatch) => {
+        dispatch({ type: 'SET_EMPTY' });
     };
 }
