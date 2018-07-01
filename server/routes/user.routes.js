@@ -15,4 +15,6 @@ module.exports = (app) => {
     app.route('/getTrip').get(User.getTrip);
     app.route('/singleAvailableEmployee').post(User.singleAvailableEmployee);
     app.route('/makePayment').post(User.makePayment);
+    app.route('/getBlock').post(User.getBlockTrip);
+    app.route('/createBlock').post(User.createBlockTrip);
 };

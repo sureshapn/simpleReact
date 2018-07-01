@@ -1,5 +1,7 @@
 const _ = require('lodash');
 const userService = require('../services/user.services');
+const getBlock = require('../services/getBlock');
+const updateBlock = require('../services/updateBlock');
 exports.getUser = (req, res) => {
     const query = _.get(req, 'body.data', {});
     return userService.getUser(query)
@@ -172,6 +174,32 @@ exports.singleAvailableEmployee = (req, res) => {
 
 exports.makePayment = (req, res) => {
     return userService.makePayment(req, res)
+    .then(data => {
+        return res.success(res, data);
+    })
+    .catch(err => {
+        res.message(res, 401, err.message || err.stack || err);
+    })
+    .catch(err => {
+        res.message(res, 500, err.message || err.stack || err);
+    });
+};
+
+exports.createBlockTrip = (req, res) => {
+    return updateBlock.createTrip(_.get(req.body, 'queryData'))
+    .then(data => {
+        return res.success(res, data);
+    })
+    .catch(err => {
+        res.message(res, 401, err.message || err.stack || err);
+    })
+    .catch(err => {
+        res.message(res, 500, err.message || err.stack || err);
+    });
+};
+
+exports.getBlockTrip = (req, res) => {
+    return getBlock.getTrip(_.get(req.body, 'queryData'))
     .then(data => {
         return res.success(res, data);
     })

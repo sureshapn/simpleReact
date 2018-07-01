@@ -196,6 +196,22 @@ export function makePayment(query, resFn) {
     };
 }
 
+export function getBlock(query, resFn) {
+    return () => {
+        axios.post(`${config.apiUrl}getBlock`, query)
+        .then((res) => {
+            if (res.data.status === 'success') {
+                resFn(res.data.data);
+            } else {
+                resFn('');
+            }
+        })
+        .catch(() => {
+            resFn('');
+        });
+    };
+}
+
 export function setEmpty() {
     return (dispatch) => {
         dispatch({ type: 'SET_EMPTY' });

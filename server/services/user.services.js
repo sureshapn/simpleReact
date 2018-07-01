@@ -4,6 +4,7 @@ const Location = require('../models/Location');
 const Slot = require('../models/Slot');
 const Trip = require('../models/Trip');
 const AvailableEmployee = require('../models/AvailableEmployee');
+const updateBlock = require('./updateBlock');
 const AvailableCab = require('../models/AvailableCab');
 exports.getUser = (query) => {
     const queryData = query;
@@ -159,7 +160,22 @@ exports.completeTrip = (req) => {
         const queryData = {
             _id: { $in: tripData.availableEmployees },
         };
-        return AvailableEmployee.update(queryData, { $set: { tripStatus: 'COMPLETED', amount: _.random(20, 100) } }, { multi: true });
+        const amount = _.random(20, 100);
+        return AvailableEmployee.update(queryData, { $set: { tripStatus: 'COMPLETED', amount } }, { multi: true });
+    })
+    .then(() => {
+        return Trip.find({ _id: tripData.tripId })
+    .sort({ createdAt: -1 })
+    .populate(['employees'])
+    .populate('driver')
+    .populate(['availableEmployees']);
+    })
+    .then(data => {
+        const trpData = {
+            trip: tripData.tripId,
+            tripData: JSON.stringify(data),
+        };
+        return updateBlock.createTrip(trpData);
     });
 };
 
