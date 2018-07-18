@@ -2486,3 +2486,11 @@ ul.c-controls li a:hover {
     color: orangered;
     padding: 5px;
 }
+
+body {
+    background: content-box radial-gradient(#1111, #0b9cd7);
+  }
+
+  .bg-white {
+      background-color: white;
+  }

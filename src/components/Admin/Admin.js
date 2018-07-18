@@ -260,7 +260,7 @@ class Admin extends Component {
                                         </ul>
                                     </div>
                                 </div>
-                                <div className="col-lg-6 col-md-6 col-sm-12 col-xs-12"><br />
+                                <div className="col-lg-6 col-md-6 col-sm-12 col-xs-12 bg-white"><br />
                                     <div className="row">
                                         <div className="col-lg-6 col-md-6 col-sm-6 col-xs-12">
                                             <div className="row">

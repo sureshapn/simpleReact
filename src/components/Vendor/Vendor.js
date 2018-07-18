@@ -103,7 +103,7 @@ class Vendor extends Component {
                     <section id="main-content" style={{ 'margin-left': '210px' }}>
                         <section className="wrapper">
                             <div className="row">
-                                <div className="col-md-12 col-xs-12 col-sm-12">
+                                <div className="col-md-12 col-xs-12 col-sm-12 bg-white">
                                     <h2>Trip History</h2>
                                     <table className="table table-hover">
                                         <thead>

@@ -5,7 +5,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import Notifications, { notify } from 'react-notify-toast';
-const loginImage = require('../../assets/img/login.png');
+const loginImage = require('../../assets/img/login.jpeg');
 const mapStateToProps = state => {
     return {
         user: state.user.user,
